@@ -478,32 +478,154 @@ def test_compat_responses_v03() -> None:
 
 def test_convert_to_openai_data_block() -> None:
     # Chat completions
-    # Image / url
-    block = {
-        "type": "image",
-        "url": "https://example.com/test.png",
-    }
-    expected = {
-        "type": "image_url",
-        "image_url": {"url": "https://example.com/test.png"},
-    }
-    result = convert_to_openai_data_block(block)
-    assert result == expected
+    # Image / URL blocks. Without `detail`
+    input_blocks: list[dict] = [
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+        },
+    ]
 
-    # Image / base64
-    block = {
-        "type": "image",
-        "base64": "<base64 string>",
-        "mime_type": "image/png",
-    }
-    expected = {
-        "type": "image_url",
-        "image_url": {"url": "data:image/png;base64,<base64 string>"},
-    }
-    result = convert_to_openai_data_block(block)
-    assert result == expected
+    for input_block in input_blocks:
+        expected = {
+            "type": "image_url",
+            "image_url": {"url": "https://example.com/test.png"},
+        }
+        result = convert_to_openai_data_block(input_block)
+        assert result == expected
 
-    # File / url
+    # Chat completions
+    # Image / URL blocks. With `detail` in different places
+    input_blocks = [
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+            "metadata": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+            "metadata": {"detail": "high"},
+        },
+    ]
+
+    for input_block in input_blocks:
+        expected = {
+            "type": "image_url",
+            "image_url": {"url": "https://example.com/test.png", "detail": "high"},
+        }
+        result = convert_to_openai_data_block(input_block)
+        assert result == expected
+
+    # Chat completions
+    # Image / base64 blocks. Without `detail`
+    input_blocks = [
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "image_url",
+            "image_url": {
+                "url": "data:image/png;base64,<base64 string>",
+            },
+        }
+        result = convert_to_openai_data_block(input_block)
+        assert result == expected
+
+    # Chat completions
+    # Image / base64 blocks. With `detail` in different places
+    input_blocks = [
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+            "metadata": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+            "metadata": {"detail": "high"},
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "image_url",
+            "image_url": {
+                "url": "data:image/png;base64,<base64 string>",
+                "detail": "high",
+            },
+        }
+        result = convert_to_openai_data_block(input_block)
+        assert result == expected
+
+    # Chat completions
+    # File / URL blocks. Unsupported for Chat Completions, should raise error
     block = {
         "type": "file",
         "url": "https://example.com/test.pdf",
@@ -511,32 +633,82 @@ def test_convert_to_openai_data_block() -> None:
     with pytest.raises(ValueError, match="does not support"):
         result = convert_to_openai_data_block(block)
 
-    # File / base64
-    block = {
-        "type": "file",
-        "base64": "<base64 string>",
-        "mime_type": "application/pdf",
-        "filename": "test.pdf",
-    }
-    expected = {
-        "type": "file",
-        "file": {
-            "file_data": "data:application/pdf;base64,<base64 string>",
+    # Chat completions
+    # File / base64 blocks. With `filename` in different places
+    input_blocks = [
+        {
+            "type": "file",
+            "base64": "<base64 string>",
+            "mime_type": "application/pdf",
             "filename": "test.pdf",
         },
-    }
-    result = convert_to_openai_data_block(block)
-    assert result == expected
+        {
+            "type": "file",
+            "base64": "<base64 string>",
+            "mime_type": "application/pdf",
+            "extras": {"filename": "test.pdf"},
+        },
+        {
+            "type": "file",
+            "base64": "<base64 string>",
+            "mime_type": "application/pdf",
+            "metadata": {"filename": "test.pdf"},
+        },
+        {
+            "type": "file",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "application/pdf",
+            "filename": "test.pdf",
+        },
+        {
+            "type": "file",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "application/pdf",
+            "extras": {"filename": "test.pdf"},
+        },
+        {
+            "type": "file",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "application/pdf",
+            "metadata": {"filename": "test.pdf"},
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "file",
+            "file": {
+                "file_data": "data:application/pdf;base64,<base64 string>",
+                "filename": "test.pdf",
+            },
+        }
+        result = convert_to_openai_data_block(input_block)
+        assert result == expected
 
-    # File / file ID
-    block = {
-        "type": "file",
-        "file_id": "file-abc123",
-    }
-    expected = {"type": "file", "file": {"file_id": "file-abc123"}}
-    result = convert_to_openai_data_block(block)
-    assert result == expected
+    # Chat completions
+    # File / file ID blocks
+    input_blocks = [
+        {
+            "type": "file",
+            "file_id": "file-abc123",
+        },
+        {
+            "type": "file",
+            "source_type": "id",
+            "id": "file-abc123",
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "file",
+            "file": {"file_id": "file-abc123"},
+        }
+        result = convert_to_openai_data_block(input_block)
+        assert result == expected
 
+    # Chat completions
     # Audio / base64
     block = {
         "type": "audio",
@@ -551,55 +723,223 @@ def test_convert_to_openai_data_block() -> None:
     assert result == expected
 
     # Responses
-    # Image / url
-    block = {
-        "type": "image",
-        "url": "https://example.com/test.png",
-    }
-    expected = {"type": "input_image", "image_url": "https://example.com/test.png"}
-    result = convert_to_openai_data_block(block, api="responses")
-    assert result == expected
+    # Image / URL blocks. Without `detail`
+    input_blocks = [
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {"type": "input_image", "image_url": "https://example.com/test.png"}
+        result = convert_to_openai_data_block(input_block, api="responses")
+        assert result == expected
 
-    # Image / base64
-    block = {
-        "type": "image",
-        "base64": "<base64 string>",
-        "mime_type": "image/png",
-    }
-    expected = {
-        "type": "input_image",
-        "image_url": "data:image/png;base64,<base64 string>",
-    }
-    result = convert_to_openai_data_block(block, api="responses")
-    assert result == expected
+    # Responses
+    # Image / URL blocks. With `detail` in different places
+    input_blocks = [
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "url": "https://example.com/test.png",
+            "metadata": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "url",
+            "url": "https://example.com/test.png",
+            "metadata": {"detail": "high"},
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "input_image",
+            "image_url": "https://example.com/test.png",
+            "detail": "high",
+        }
+        result = convert_to_openai_data_block(input_block, api="responses")
+        assert result == expected
 
-    # File / url
-    block = {
+    # Responses
+    # Image / base64 blocks. Without `detail`
+    input_blocks = [
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "input_image",
+            "image_url": "data:image/png;base64,<base64 string>",
+        }
+        result = convert_to_openai_data_block(input_block, api="responses")
+        assert result == expected
+
+    # Responses
+    # Image / base64 blocks. With `detail` in different places
+    input_blocks = [
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "base64": "<base64 string>",
+            "mime_type": "image/png",
+            "metadata": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+            "detail": "high",
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+            "extras": {"detail": "high"},
+        },
+        {
+            "type": "image",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "image/png",
+            "metadata": {"detail": "high"},
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "input_image",
+            "image_url": "data:image/png;base64,<base64 string>",
+            "detail": "high",
+        }
+        result = convert_to_openai_data_block(input_block, api="responses")
+        assert result == expected
+
+    # Responses
+    # File / url blocks
+    input_block = {
         "type": "file",
         "url": "https://example.com/test.pdf",
     }
     expected = {"type": "input_file", "file_url": "https://example.com/test.pdf"}
-
-    # File / base64
-    block = {
-        "type": "file",
-        "base64": "<base64 string>",
-        "mime_type": "application/pdf",
-        "filename": "test.pdf",
-    }
-    expected = {
-        "type": "input_file",
-        "file_data": "data:application/pdf;base64,<base64 string>",
-        "filename": "test.pdf",
-    }
-    result = convert_to_openai_data_block(block, api="responses")
+    result = convert_to_openai_data_block(input_block, api="responses")
     assert result == expected
 
-    # File / file ID
-    block = {
-        "type": "file",
-        "file_id": "file-abc123",
-    }
-    expected = {"type": "input_file", "file_id": "file-abc123"}
-    result = convert_to_openai_data_block(block, api="responses")
-    assert result == expected
+    # Responses
+    # File / base64 blocks. With `filename` in different places
+    input_blocks = [
+        {
+            "type": "file",
+            "base64": "<base64 string>",
+            "mime_type": "application/pdf",
+            "filename": "test.pdf",
+        },
+        {
+            "type": "file",
+            "base64": "<base64 string>",
+            "mime_type": "application/pdf",
+            "extras": {"filename": "test.pdf"},
+        },
+        {
+            "type": "file",
+            "base64": "<base64 string>",
+            "mime_type": "application/pdf",
+            "metadata": {"filename": "test.pdf"},
+        },
+        {
+            "type": "file",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "application/pdf",
+            "filename": "test.pdf",
+        },
+        {
+            "type": "file",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "application/pdf",
+            "extras": {"filename": "test.pdf"},
+        },
+        {
+            "type": "file",
+            "source_type": "base64",
+            "data": "<base64 string>",
+            "mime_type": "application/pdf",
+            "metadata": {"filename": "test.pdf"},
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "input_file",
+            "file_data": "data:application/pdf;base64,<base64 string>",
+            "filename": "test.pdf",
+        }
+        result = convert_to_openai_data_block(input_block, api="responses")
+        assert result == expected
+
+    # Responses
+    # File / file ID blocks
+    input_blocks = [
+        {
+            "type": "file",
+            "file_id": "file-abc123",
+        },
+        {
+            "type": "file",
+            "source_type": "id",
+            "id": "file-abc123",
+        },
+    ]
+    for input_block in input_blocks:
+        expected = {
+            "type": "input_file",
+            "file_id": "file-abc123",
+        }
+        result = convert_to_openai_data_block(input_block, api="responses")
+        assert result == expected
